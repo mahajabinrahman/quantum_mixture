@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import dataset_creator as ds
 import initialize as initialize
 
-results = open("output.txt", 'w')
 
 for epsilon in range(0,5):
 	epsilon = str(epsilon)
@@ -49,4 +48,4 @@ plt.scatter([x[0] for x in new_centers],[x[1] for x in new_centers],s=50, c=u'c'
 
 plt.show()
 
-results.close()
+
