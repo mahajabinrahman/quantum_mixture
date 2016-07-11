@@ -7,8 +7,6 @@ import matplotlib.pyplot as plt
 import dataset_creator as ds
 import initialize as initialize
 
-
-
 results = open("output.txt", 'w')
 
 for epsilon in range(0,5):
