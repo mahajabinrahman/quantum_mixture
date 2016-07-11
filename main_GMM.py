@@ -36,8 +36,10 @@ new_centers,covariances,weights = initialize.iterate_M(gammas,N, x_coord, y_coor
 while set(centers) != set(new_centers):
 	centers = new_centers 
 	new_centers = []
-	gammas, N = initialize.iterate_E(covariances, weights, centers, x_coord,y_coord,data_set)
-	new_centers,covariances,weights = initialize.iterate_M(gammas,N,x_coord, y_coord)
+	gammas, N = initialize.iterate_E(covariances, weights, centers,
+                                         x_coord, y_coord, data_set)
+	new_centers,covariances,weights = initialize.iterate_M(gammas, N,x_coord,
+                                                               y_coord)
 	print covariances
 
 	
@@ -47,12 +49,4 @@ plt.scatter([x[0] for x in new_centers],[x[1] for x in new_centers],s=50, c=u'c'
 
 plt.show()
 
-
-
-
 results.close()
-
-
-
-
-
