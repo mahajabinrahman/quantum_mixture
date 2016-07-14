@@ -27,7 +27,7 @@ def get_distribution(x_i, y_i, center, inv_cov):
     mu_x = center[0]
     mu_y = center[1]
     diff_matrix = np.matrix([[x_i - mu_x], [y_i - mu_y]])
-    probability_distribution = np.exp(-(1 / 2.0) * \
+    probability_distribution = np.exp(-(1 / 2.0) *
                                       (diff_matrix.transpose() * inv_cov * diff_matrix))
     return probability_distribution
 
@@ -40,18 +40,18 @@ def get_center(distribution, x, y):
 
 def get_initial_guesses(k, data_set, centers, x_coord, y_coord):
     sums_list = []
-    point_distribution_array = np.zeros((2,200))
+    point_distribution_array = np.zeros((2, 200))
 
-    count_j = 0 
+    count_j = 0
 
     for j in centers:
         cov = np.cov([x_coord, y_coord])
         inv_cov = np.linalg.inv(cov)
 
-        count_i = 0 
+        count_i = 0
 
         for coord in data_set:
-       
+
             g_i = float(get_distribution(coord[0], coord[1], j, inv_cov))
             point_distribution_array[count_j, count_i] = g_i
             count_i += 1
@@ -93,7 +93,7 @@ def iterate_M(gammas, N, x_coord, y_coord):
     total_points = sum(N)
 
     for gamma in gammas:
-     
+
         N_k = N[count]
         weight = N_k / total_points
         weights.append(weight)
@@ -114,7 +114,7 @@ def iterate_E(covariances, weights, mu, x_coord, y_coord, dataset):
 
     weighted_prob = []
     covariance = []
-    point_distribution_array = np.zeros((2,200))
+    point_distribution_array = np.zeros((2, 200))
 
     count_j = 0
     for covariance in covariances:
@@ -123,19 +123,20 @@ def iterate_E(covariances, weights, mu, x_coord, y_coord, dataset):
         cov_matrix = covariances[count_j]
         inv_cov = np.linalg.inv(cov_matrix)
 
-        count_i = 0 
+        count_i = 0
         for coord in dataset:
             g_i = float(get_distribution(coord[0], coord[1], center, inv_cov))
             point_distribution_array[count_j, count_i] = g_i
-            count_i += 1 
-        probability = weight *point_distribution_array[count_j]* (1.0 / sum(point_distribution_array[count_j]))
-        count_j += 1 
+            count_i += 1
+        probability = weight * \
+            point_distribution_array[count_j] * (1.0 / sum(point_distribution_array[count_j]))
+        count_j += 1
 
         weighted_prob.append(probability)
 
     sum_p_k = sum(weighted_prob)
 
-    N_points  = []
+    N_points = []
     gammas = []
 
     for p_k in weighted_prob:
