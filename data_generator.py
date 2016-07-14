@@ -4,58 +4,69 @@ import random
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+import math
 
 #randomly import parameters
 
-def get_input(x_center,y_center, sigma_bound):
-    theta = random.randint(0,360)
-    theta = theta*(1.0/57.0)
-    #sigma_x = random.randint(0,5)
-    #sigma_y = random.randint(0,5)
-    sigma_x = sigma_bound
-    sigma_y = sigma_bound
 
 
-    return theta,sigma_x,sigma_y,x_center,y_center
 
-def get_prime_data(x_center,y_center, sigma_x, sigma_y): 
+#generates data points by sampling  gaussian about the origin
+def get_sampled_data(sigma_x, sigma_y, n=100): 
 
-    x_prime = np.random.normal(x_center, sigma_x,100)
-    y_prime = np.random.normal(y_center, sigma_y,100)
+    x_prime = np.random.normal(0, sigma_x,n)
+    y_prime = np.random.normal(0, sigma_y,n)
 
     return x_prime, y_prime 
 
 def transform_coordinates(x_prime, y_prime,x_center,y_center, theta):
 
     coords = np.matrix([x_prime, y_prime])
-    coords = coords.transpose()
-    center_matrix = np.matrix([x_center, y_center])
-    center_matrix = center_matrix.transpose()
+    center_matrix = np.matrix([[x_center], [y_center]])
     rotation_matrix = np.matrix([[np.cos(theta), np.sin(theta)],[(-1)*np.sin(theta), np.cos(theta)]])
     new_coords = rotation_matrix*coords
     abs_coords = new_coords - center_matrix
 
     return abs_coords 
 
-def get_class_arrays(x_center,y_center,sigma_bound):
+def get_class_arrays(x_center,y_center,sigma_x, sigma_y,n=100):
 
-    theta, sigma_x, sigma_y, x_center, y_center  = get_input(x_center, y_center,sigma_bound)
-    x_prime, y_prime = get_prime_data(x_center, y_center, sigma_x, sigma_y)
+    theta = random.random()*2*math.pi
+    x_prime, y_prime = get_sampled_data(sigma_x, sigma_y,n)
     x_coord = []
     y_coord = []
-    for i in range(0,100):
-        abs_coords = transform_coordinates(x_prime[i],y_prime[i],x_center,y_center, theta)
-       
-
-        x=x_prime[i]
-        y=y_prime[i]
-
-        x_coord.append(x)
-        y_coord.append(y)
     
-    return x_coord, y_coord, sigma_x, sigma_y
+    abs_coords = transform_coordinates(x_prime, y_prime, x_center, y_center, theta)
+    x_coord = abs_coords[0]
+    y_coord = abs_coords[1]
+    
+    
+    return x_coord, y_coord
 
 
+def get_data(mu_x1, mu_y1, mu_x2, mu_y2, sigma_x, sigma_y):
+    x_coord, y_coord = get_class_arrays(mu_x1, mu_y1, sigma_x, sigma_y)
+    x_coord_1 = np.array(x_coord)
+    y_coord_1 = np.array(y_coord)
+   
+    coords_1 = np.array([x_coord_1[0], y_coord_1[0]])
+    cov_matrix_1 = np.cov(coords_1)
+
+    x_coord2, y_coord2 = get_class_arrays(mu_x2, mu_y2, sigma_x, sigma_y)
+    x_coord_2 = np.array(x_coord2)
+    y_coord_2 = np.array(y_coord2)
+   
+    coords_2 = np.array([x_coord_2[0], y_coord_2[0]])
+    cov_matrix_2 = np.cov(coords_2)
+    
+    x_coord = x_coord_1[0].tolist()
+    y_coord = y_coord_1[0].tolist()
+    x_coord2 = x_coord_2[0].tolist()
+    y_coord2 = y_coord_2[0].tolist()
+   
+    x_coord.extend(x_coord2)
+    y_coord.extend(y_coord2)
+    return x_coord, y_coord, cov_matrix_1, cov_matrix_2, mu_x1, mu_y1, mu_x2, mu_y2
 
 
 
