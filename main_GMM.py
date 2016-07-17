@@ -9,13 +9,22 @@ import data_generator as ds
 import initialize as initialize
 
 
-x_coord, y_coord, real_cov1, real_cov2, real_x1, real_y1, real_x2, real_y2 = ds.get_data(
-    mu_x1=5, mu_y1=10, mu_x2=11, mu_y2=106, sigma_x=4, sigma_y=2)
+random.seed(400)
+np.random.seed(78)
+
+
+
+x_coord, y_coord, real_cov1, real_cov2, mu_x1, mu_y1, mu_x2, mu_y2 = ds.get_data(mu_x1=-10, mu_y1=-10, mu_x2=10, mu_y2=10, sigma_x=5, sigma_y=2)
+print real_cov1
+print real_cov2
+print  mu_x1, mu_y1, mu_x2, mu_y2
 
 data_set = zip(x_coord, y_coord)
 x_coord = np.array(x_coord)
 y_coord = np.array(y_coord)
 plt.scatter(x_coord, y_coord)
+plt.xlim([-20, 20])
+plt.ylim([-20, 20])
 k = 2
 
 centers = initialize.center_seed(k, data_set)
@@ -37,7 +46,10 @@ while not np.allclose(centers, new_centers, rtol=1e-05, atol=1e-08):
     new_centers, covariances, weights = initialize.iterate_M(
         gammas, N, x_coord, y_coord)
 
-    #print new_centers
+print "centers:", new_centers
+print "covariance 1:", covariances[0]
+print "covariance 2:",  covariances[1]
+print " weights:", weights
 
 
 plt.scatter([x[0] for x in new_centers],

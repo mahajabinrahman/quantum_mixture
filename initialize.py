@@ -2,7 +2,6 @@
 import numpy as np
 import random
 
-
 def center_seed(k, data_set):
     centers = random.sample(data_set, k)
     return centers
@@ -11,14 +10,31 @@ def center_seed(k, data_set):
 def get_covariance(gamma, x, y, center, N_k):
     diff_x = x - center[0]
     diff_y = y - center[1]
+    
 
     normalized_gamma = gamma / N_k
 
+   
+
+#    print(normalized_gamma.shape, diff_x.shape)
     var_x = float(sum(normalized_gamma * diff_x**2))
     var_y = float(sum(normalized_gamma * diff_y**2))
     var_xy = float(sum(normalized_gamma * diff_x * diff_y))
 
+    if var_x*var_y - var_xy**2 < 1.0e-12:
+        var_y = var_y + 1.0e-12
+        if var_x*var_y - var_xy**2 == 0.0:
+           var_x = var_x + 1.0e-12
+        
+        
+
     cov_matrix = np.matrix([[var_x, var_xy], [var_xy, var_y]])
+
+  #  print(normalized_gamma.sum(), (diff_x**2).sum())
+
+ #   for (a, b) in zip(normalized_gamma, diff_x**2):
+ #       print(a, b), a*b
+ #   print(var_x, var_y, var_xy, np.linalg.det(cov_matrix), var_x*var_y - var_xy**2)
 
     return cov_matrix
 
@@ -121,6 +137,7 @@ def iterate_E(covariances, weights, mu, x_coord, y_coord, dataset):
         center = mu[count_j]
         weight = weights[count_j]
         cov_matrix = covariances[count_j]
+ 
         inv_cov = np.linalg.inv(cov_matrix)
 
         count_i = 0
@@ -128,19 +145,18 @@ def iterate_E(covariances, weights, mu, x_coord, y_coord, dataset):
             g_i = float(get_distribution(coord[0], coord[1], center, inv_cov))
             point_distribution_array[count_j, count_i] = g_i
             count_i += 1
-        probability = weight * \
-            point_distribution_array[count_j] * (1.0 / sum(point_distribution_array[count_j]))
-        count_j += 1
+
+        probability = (weight*point_distribution_array[count_j])/ sum(point_distribution_array[count_j])
 
         weighted_prob.append(probability)
-
-    sum_p_k = sum(weighted_prob)
+        count_j += 1
 
     N_points = []
     gammas = []
 
     for p_k in weighted_prob:
-        gamma = p_k * (1.0 / sum_p_k)
+        gamma = p_k/sum(weighted_prob)
+        #print p_k 
         N_k = sum(gamma)
         gammas.append(gamma)
         N_points.append(N_k)
