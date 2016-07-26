@@ -30,6 +30,7 @@ def get_initial_parameters(data_set,x_coord, y_coord,k):
     alpha_2 = random.uniform(0,1)
     cov_matrix_1 = get_temp_cov(x_coord,y_coord,center_1[0],center_1[1])
     cov_matrix_2 = get_temp_cov(x_coord,y_coord,center_2[0],center_2[1])
+
     return cos_phi, centers, cov_matrix_1, cov_matrix_2, alpha_1, alpha_2
 
 #get gaussian component of the di
@@ -47,7 +48,7 @@ def get_gaussian(cov_matrix, data_set, mu_x, mu_y):
         count += 1
  
     normalization = np.sqrt(sum(gaussian_distribution_array**2))
-    gaussian_distribution_array = (1/normalization)*gaussian_distribution_array   
+    gaussian_distribution_array = (1.0/normalization)*gaussian_distribution_array   
     return gaussian_distribution_array
 
 def get_distribution(data_set, cos_phi, cov_matrix_1, cov_matrix_2,mu_x0,mu_y0,mu_x1,mu_y1,alpha_1,alpha_2):
@@ -65,6 +66,9 @@ def get_distribution(data_set, cos_phi, cov_matrix_1, cov_matrix_2,mu_x0,mu_y0,m
     Q_1 = E_1/(E_1 + E_2)
     Q_2 = E_2/(E_1 + E_2)
 
+    Q_1 = Q_1/sum(Q_1)
+    Q_2 = Q_2/sum(Q_2)
+
     return Q_1, Q_2
 
 def get_cos_phi(alpha_1, alpha_2, G_1, G_2):
@@ -81,47 +85,45 @@ def get_lambda(cos_phi, Q_1, Q_2, G_1, G_2, alpha_1, alpha_2):
 	
     return lambda_0
 
+def get_alphas(lambda_0, cos_phi, Q_1, Q_2, G_1, G_2, alpha_1, alpha_2):
 
-def get_alpha_1(lambda_0, cos_phi, Q_1, Q_2, G_1, G_2, alpha_1, alpha_2):
+    def fun(alphas):
+        alpha_1, alpha_2 = alphas
+        return sum(-Q_1*np.log((alpha_1**2)*G_1**2 + alpha_1*alpha_2*G_1*G_2*cos_phi) - Q_2*np.log((alpha_2**2)*G_2**2 + alpha_1*alpha_2*G_1*G_2*cos_phi)) - lambda_0*(1 - alpha_1**2 + alpha_2**2 + 2*cos_phi*alpha_1*alpha_2*sum(G_1*G_2)) 
 
-    fun = lambda alpha_1: sum(-Q_1*np.log(alpha_1**2 + alpha_1*alpha_2*G_1*G_2*cos_phi) - Q_2*np.log(alpha_2**2 + alpha_1*alpha_2*G_1*G_2*cos_phi))
+    def total_dist(alphas):
+        alpha_1, alpha_2 = alphas
+        
+        return (1-alpha_1**2 - alpha_2**2)/2*alpha_1*alpha_2*sum(G_1*G_2)
 
-    jac = lambda alpha_1: sum(-Q_1*(2*alpha_1*(G_1/G_2) + alpha_2*cos_phi)/(alpha_1*(alpha_1*(G_1/G_2) + alpha_2*cos_phi)) - Q_2*(cos_phi/(alpha_2*(G_2/G_1) + alpha_1*cos_phi)))
+    def jac(alphas):
+        alpha_1, alpha_2 = alphas
 
-    x0 = [1.0]
+        d1 = sum(-Q_1*(2*alpha_1*(G_1/G_2) + alpha_2*cos_phi)/(alpha_1*(alpha_1*(G_1/G_2) + alpha_2*cos_phi)) - Q_2*(cos_phi/(alpha_2*(G_2/G_1) + alpha_1*cos_phi))) + 2*lambda_0*(alpha_1 + alpha_2*sum(G_1*G_2)*cos_phi)
+        
+        d2 = sum(-Q_1*(cos_phi)/(alpha_1*(G_1/G_2)) - Q_2*((2*alpha_2*(G_2/G_1) + alpha_1*cos_phi)/(alpha_2*(alpha_2*(G_2/G_1) + alpha_1*cos_phi)))) + 2*lambda_0*(alpha_2 + alpha_1*sum(G_1*G_2)*cos_phi)
+                                                                  
+                 
+        return np.array([d1,d2])
 
-    value = optimize.minimize(fun, x0, method='CG', jac=jac)
-#    alpha_1 = float(value.x)
+    def callbackF(x):
+        print x, fun(x), jac(x)
+       
+    x0 = [1.0, 1.0]
 
-#    gamma = G_1/G_2
-#
-#    alpha_1 = sum(Q_1*(cos_phi)/(alpha_1*gamma + alpha_2*cos_phi) + Q_2*(2*alpha_2*(gamma**(-1)) + alpha_1*cos_phi)/(alpha_2*(alpha_2*gamma**(-1) + alpha_1*cos_phi))) - 2*lambda_0*alpha_2**2
+    opt = {'maxiter': 100}
+    value = optimize.minimize(fun, x0, callback = callbackF, method='CG', jac=jac, tol= 1.0e-06, options = opt)
     
-#    alpha_1 = alpha_1/(2*lambda_0*sum(G_1*G_2)*cos_phi)
-
-    alpha_1 = -.9
-    return alpha_1
-
-def get_alpha_2(lambda_0, cos_phi, Q_1, Q_2, G_1, G_2, alpha_1, alpha_2):
-
-    fun = lambda alpha_2: -sum(Q_1*np.log(alpha_1**2 + alpha_1*alpha_2*G_1*G_2*cos_phi) + Q_2*np.log(alpha_2**2 + alpha_1*alpha_2*G_1*G_2*cos_phi))
-
-    jac = lambda alpha_2: -sum(Q_1*(cos_phi)/(alpha_1*(G_1/G_2)) + Q_2*((2*alpha_2*(G_2/G_1) + alpha_1*cos_phi)/(alpha_2*(alpha_2*(G_2/G_1) + alpha_1*cos_phi))) - 2*lambda_0*(alpha_2 + alpha_1*G_1*G_2*cos_phi))
-
-    x0 = [1.2]
-
-    value = optimize.minimize(fun,x0, method='CG',jac=jac)
+    #r = scipy.optimize.show_options(solver='minimize', method='CG')
+    #print(r)
     
-#    alpha_2 = float(value.x)
-#    gamma = G_1/G_2
+    alpha_1 = float(value.x[0])
+    alpha_2 = float(value.x[1])
+    print alpha_1, alpha_2
+  
+    exit()
+    return alpha_1, alpha_2
 
-#    alpha_2 = sum(Q_1*(cos_phi)/(alpha_1*gamma + alpha_2*cos_phi) + Q_2*(2*alpha_2*(gamma**(-1)) + alpha_1*cos_phi)/(alpha_2*(alpha_2*gamma**(-1) + alpha_1*cos_phi)) - 2*lambda_0*alpha_1*G_1*G_2*cos_phi)
-    #
-#    alpha_2 = alpha_2/(2*lambda_0)
-
-    alpha_2 = .8
-
-    return alpha_2
 
 def get_mu_1(x, y, lambda_0, cos_phi, Q_1, Q_2, G_1, G_2, alpha_1, alpha_2):
 
@@ -149,10 +151,12 @@ def get_mu_2(x,y,lambda_0, cos_phi, Q_1, Q_2, G_1, G_2, alpha_1, alpha_2):
     return new_center_2
 
 def cov_matrix_1(lambda_0, cos_phi, Q_1, Q_2, G_1, G_2, alpha_1, alpha_2, x, y,  mu_1):
+
     mu_x = mu_1[0]
     mu_y = mu_1[1]
     diff_x = x - mu_x
     diff_y = y - mu_y
+
 
     H_i  = Q_1*(2*alpha_1*G_1 + alpha_2*G_2*cos_phi)/(alpha_1*G_1 + alpha_2*G_2*cos_phi) + Q_2*(alpha_1*G_1*cos_phi)/(alpha_2*G_2 + alpha_1*G_1*cos_phi)
 
@@ -166,15 +170,9 @@ def cov_matrix_1(lambda_0, cos_phi, Q_1, Q_2, G_1, G_2, alpha_1, alpha_2, x, y, 
 	
     cov_matrix_1 = np.matrix([[var_x,var_xy],[var_xy,var_y]])
     
-    if var_x*var_y - var_xy**2 < 1.0e-10:
-        var_xy**2 == 1.0e-11
-
-#    print'COV 1', (normalized_H_i.sum(), (diff_x**2).sum()), alpha_1, alpha_2
-
-#    for (a, b) in zip(normalized_H_i, diff_x**2):
-#        print(a, b), a*b
-#    print(var_x, var_y, var_xy, np.linalg.det(cov_matrix_1), var_x*var_y - var_xy**2)
-
+    print 'COV 1 stats'
+    print(normalized_H_i.sum(), (diff_x**2).sum())
+    print(var_x, var_y, var_xy, np.linalg.det(cov_matrix_1), var_x*var_y - var_xy**2)
     return cov_matrix_1
 
 def cov_matrix_2(lambda_0, cos_phi, Q_1, Q_2, G_1, G_2, alpha_1, alpha_2, x, y, mu_2):
@@ -195,25 +193,15 @@ def cov_matrix_2(lambda_0, cos_phi, Q_1, Q_2, G_1, G_2, alpha_1, alpha_2, x, y, 
     var_x = float(sum(normalized_H_i*diff_x))
     var_y = float(sum(normalized_H_i*diff_y))
     var_xy = float(sum(H_i*diff_x*diff_y))
+
+    var_x = float(sum(Q_2 * diff_x**2))
+    var_y = float(sum(Q_2 * diff_y**2))
+    var_xy = float(sum(Q_2 * diff_x * diff_y))
 	
     cov_matrix_2 = np.matrix([[var_x,var_xy],[var_xy,var_y]])
-    if var_x*var_y - var_xy**2 < 1.0e-10:
-        var_xy**2 == 1.0e-11
-    
 
-#    print'COV 2', (normalized_H_i.sum(), (diff_x**2).sum()), cos_phi
-#    for (a, b) in zip(normalized_H_i, diff_x**2):
-#        print(a, b), a*b
-#    print(var_x, var_y, var_xy, np.linalg.det(cov_matrix_1), var_x*var_y - var_xy**2)
+    print'COV 2', (normalized_H_i.sum(), (diff_x**2).sum())
+    print(var_x, var_y, var_xy, np.linalg.det(cov_matrix_2), var_x*var_y - var_xy**2)
 
 
     return cov_matrix_2
-
-
-#corrections
-#check gaussian normalization
-#order?
-#check alpha
-#check covariance
-#fix expectation value calculation
-    
