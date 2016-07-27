@@ -6,7 +6,10 @@ import matplotlib.pyplot as plt
 import data_generator as ds
 import calculate_param as cm
 
-x_coord,y_coord,real_cov1, real_cov2, real_x1, real_y1, real_x2, real_y2 = ds.get_data(5,10, 10,12,7,10)
+random.seed(400)
+np.random.seed(78)
+
+x_coord,y_coord,real_cov1, real_cov2, real_x1, real_y1, real_x2, real_y2 = ds.get_data(5,10, 10,12,7,4)
 
 data_set = zip(x_coord,y_coord)
 x_coord = np.array(x_coord)
@@ -48,17 +51,15 @@ cos_phi, lambda_nc, alpha_1, alpha_2, new_centers, cov_matrix_1, cov_matrix_2 = 
 
 while set(centers) != set(new_centers):
     centers = new_centers
-   
     G_1, G_2, Q_1, Q_2 = E_Step(centers, cov_matrix_1, cov_matrix_2, data_set, alpha_1, alpha_2)
-    print 'Q_1', Q_1 
-    print 'Q_2', Q_2
-
     cos_phi, lambda_nc, alpha_1, alpha_2, new_centers, cov_matrix_1, cov_matrix_2 = M_Step(Q_1,Q_2, G_1, G_2, alpha_1, alpha_2)
-    print cos_phi, alpha_1, alpha_2, new_centers, cov_matrix_1, cov_matrix_2
+    print 'cos phi:', cos_phi
+    print 'alpha_1 & alpha_2', alpha_1, alpha_2
+    print 'probability sum', alpha_1**2 + alpha_2**2 + 2*alpha_1*alpha_2*cos_phi*sum(G_1*G_2)
+    print 'cov 1', cov_matrix_1
+    print 'cov 2', cov_matrix_2
+    
 
 
 
 
-#plt.scatter([x[0] for x in new_centers],[x[1] for x in new_centers],s=50, c=u'c', marker=u'o',cmap=None, norm=None, vmin=None, vmax=50, alpha=None, linewidths=None, verts=None, hold=None)
-
-#plt.show()

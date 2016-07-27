@@ -18,6 +18,7 @@ def get_temp_cov(x,y,mu_x, mu_y):
     var_xy = float((sum(diff_x*diff_y))/len(x))
     cov_matrix = np.matrix([[var_x,var_xy],[var_xy,var_y]])
     inv_cov = np.linalg.inv(cov_matrix)
+
     return cov_matrix
 
 # initializes first iteration of parameters randomly
@@ -73,6 +74,7 @@ def get_distribution(data_set, cos_phi, cov_matrix_1, cov_matrix_2,mu_x0,mu_y0,m
 
 def get_cos_phi(alpha_1, alpha_2, G_1, G_2):
     cos_phi = (1 - alpha_1**2 - alpha_2**2)/(2*alpha_2*alpha_1*sum(G_1*G_2))
+
     return cos_phi
 
 def get_lambda(cos_phi, Q_1, Q_2, G_1, G_2, alpha_1, alpha_2):
@@ -87,11 +89,42 @@ def get_lambda(cos_phi, Q_1, Q_2, G_1, G_2, alpha_1, alpha_2):
 
 def get_alphas(lambda_0, cos_phi, Q_1, Q_2, G_1, G_2, alpha_1, alpha_2):
 
+    np.seterr(invalid = 'ignore')
+
+    print alpha_1, alpha_2, cos_phi, sum(G_1*G_2)
+
     def fun(alphas):
         alpha_1, alpha_2 = alphas
-        return sum(-Q_1*np.log((alpha_1**2)*G_1**2 + alpha_1*alpha_2*G_1*G_2*cos_phi) - Q_2*np.log((alpha_2**2)*G_2**2 + alpha_1*alpha_2*G_1*G_2*cos_phi)) - lambda_0*(1 - alpha_1**2 + alpha_2**2 + 2*cos_phi*alpha_1*alpha_2*sum(G_1*G_2)) 
 
-    def total_dist(alphas):
+        p_i_1 = (alpha_1**2)*G_1**2 + alpha_1*alpha_2*cos_phi*G_1*G_2
+        p_i_2 = (alpha_2**2)*G_2**2 + alpha_1*alpha_2*cos_phi*G_1*G_2
+
+        #print 'P1', p_i_1
+        #print 'P2', p_i_2
+        
+        if np.any(np.isnan(p_i_1)) or np.any(np.isnan(p_i_2)):
+            print alpha_1, alpha_2
+           # print G_1, G_2, cos_phi
+            pass
+            exit()
+
+        if np.any(p_i_1 < 0):
+            function = 1e20
+        elif np.any(p_i_2 < 0):
+            function = 1e20
+        elif not (-1 <= get_cos(alphas) <= 1):
+            function = 1e20
+        else:
+            function  = sum(-Q_1*np.log(p_i_1) - Q_2*np.log(p_i_2)) - lambda_0*(1 - alpha_1**2 + alpha_2**2 + 2*cos_phi*alpha_1*alpha_2*sum(G_1*G_2))
+
+            
+        print 'alphas:', alphas, 'function:', function
+    
+        return function
+
+# - lambda_0*(1 - alpha_1**2 + alpha_2**2 + 2*cos_phi*alpha_1*alpha_2*sum(G_1*G_2))
+    
+    def get_cos(alphas):
         alpha_1, alpha_2 = alphas
         
         return (1-alpha_1**2 - alpha_2**2)/2*alpha_1*alpha_2*sum(G_1*G_2)
@@ -102,26 +135,34 @@ def get_alphas(lambda_0, cos_phi, Q_1, Q_2, G_1, G_2, alpha_1, alpha_2):
         d1 = sum(-Q_1*(2*alpha_1*(G_1/G_2) + alpha_2*cos_phi)/(alpha_1*(alpha_1*(G_1/G_2) + alpha_2*cos_phi)) - Q_2*(cos_phi/(alpha_2*(G_2/G_1) + alpha_1*cos_phi))) + 2*lambda_0*(alpha_1 + alpha_2*sum(G_1*G_2)*cos_phi)
         
         d2 = sum(-Q_1*(cos_phi)/(alpha_1*(G_1/G_2)) - Q_2*((2*alpha_2*(G_2/G_1) + alpha_1*cos_phi)/(alpha_2*(alpha_2*(G_2/G_1) + alpha_1*cos_phi)))) + 2*lambda_0*(alpha_2 + alpha_1*sum(G_1*G_2)*cos_phi)
-                                                                  
-                 
+        
+        print 'jac input and output:'
+        print alphas, np.array([d1, d2])
+                                                                                
         return np.array([d1,d2])
+    
+    cons = ({'type': 'ineq', 'fun': lambda x:  x[1]*sum(G_1*G_2) - x[0]},{'type': 'ineq', 'fun': lambda x:  x[0] + x[1]*sum(G_1*G_2)})
 
     def callbackF(x):
-        print x, fun(x), jac(x)
-       
-    x0 = [1.0, 1.0]
+        print x, fun(x), jac(x), get_cos(x)
+    
+    x0 = [alpha_1, alpha_2]
 
     opt = {'maxiter': 100}
-    value = optimize.minimize(fun, x0, callback = callbackF, method='CG', jac=jac, tol= 1.0e-06, options = opt)
+    
+    print 'function', fun(x0), jac(x0), get_cos(x0)
+
+    value = optimize.minimize(fun, x0, method='BFGS', jac=jac, tol= 1.0e-06, options = opt)
     
     #r = scipy.optimize.show_options(solver='minimize', method='CG')
     #print(r)
     
-    alpha_1 = float(value.x[0])
-    alpha_2 = float(value.x[1])
-    print alpha_1, alpha_2
-  
+
+#    alpha_1 = float(value.x[0])
+#    alpha_2 = float(value.x[1])
+
     exit()
+    print ((alpha_1**2)*G_1**2 + alpha_1*alpha_2*G_1*G_2*cos_phi)
     return alpha_1, alpha_2
 
 
@@ -170,9 +211,9 @@ def cov_matrix_1(lambda_0, cos_phi, Q_1, Q_2, G_1, G_2, alpha_1, alpha_2, x, y, 
 	
     cov_matrix_1 = np.matrix([[var_x,var_xy],[var_xy,var_y]])
     
-    print 'COV 1 stats'
-    print(normalized_H_i.sum(), (diff_x**2).sum())
-    print(var_x, var_y, var_xy, np.linalg.det(cov_matrix_1), var_x*var_y - var_xy**2)
+ #   print 'COV 1 stats'
+ #   print(normalized_H_i.sum(), (diff_x**2).sum())
+ #   print(var_x, var_y, var_xy, np.linalg.det(cov_matrix_1), var_x*var_y - var_xy**2)
     return cov_matrix_1
 
 def cov_matrix_2(lambda_0, cos_phi, Q_1, Q_2, G_1, G_2, alpha_1, alpha_2, x, y, mu_2):
@@ -200,8 +241,8 @@ def cov_matrix_2(lambda_0, cos_phi, Q_1, Q_2, G_1, G_2, alpha_1, alpha_2, x, y, 
 	
     cov_matrix_2 = np.matrix([[var_x,var_xy],[var_xy,var_y]])
 
-    print'COV 2', (normalized_H_i.sum(), (diff_x**2).sum())
-    print(var_x, var_y, var_xy, np.linalg.det(cov_matrix_2), var_x*var_y - var_xy**2)
+#    print'COV 2', (normalized_H_i.sum(), (diff_x**2).sum())
+#    print(var_x, var_y, var_xy, np.linalg.det(cov_matrix_2), var_x*var_y - var_xy**2)
 
 
     return cov_matrix_2
